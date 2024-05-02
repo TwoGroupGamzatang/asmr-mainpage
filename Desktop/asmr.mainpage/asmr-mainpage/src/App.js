@@ -9,7 +9,7 @@ function App() {
         <span>Article</span><br />
         <span>Summarize</span><br />
         <span>Memorize</span><br />
-        <span>Recognize</span>
+        <span>Recommend</span>
       </h5>
       <h3>더 쉬워진 아티클 요약</h3>
       <form>
