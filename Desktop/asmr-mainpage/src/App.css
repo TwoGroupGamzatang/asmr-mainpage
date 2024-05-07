@@ -1,0 +1,68 @@
+.container.toss-style {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 50px;
+}
+
+h1, h3 {
+  text-align: center;
+}
+
+h1 {
+  font-weight: bold;
+  color: #007bff; /* Toss 파란색 */
+}
+
+h6 {
+  padding-left: 20px;
+}
+
+span {
+  display: inline-block;
+  position: relative;
+}
+
+span::before {
+  content: '';
+  display: block;
+  position: absolute;
+  left: -20px;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  background-color: #007bff; /* Toss 파란색 */
+}
+
+form {
+  margin-top: 30px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input[type='text'] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+button[type='submit'] {
+  background-color: #007bff; /* Toss 파란색 */
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button[type='submit']:hover {
+  background-color: #0056b3; /* Toss 파란색 더 진한 버전 */
+}
