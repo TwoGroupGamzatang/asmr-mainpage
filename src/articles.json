@@ -1,0 +1,25 @@
+{
+    "articles": [
+      {
+        "title": "Understanding JSON",
+        "tags": ["JSON", "JavaScript", "Data"],
+        "summaries": {
+          "1min": "JSON stands for JavaScript Object Notation. It is a lightweight data-interchange format...",
+          "3min": "JSON stands for JavaScript Object Notation. It is a lightweight data-interchange format used for exchanging data between a server and a client. JSON is language-independent but uses conventions that are familiar to programmers of the C family of languages...",
+          "5min": "JSON stands for JavaScript Object Notation. It is a lightweight data-interchange format used for exchanging data between a server and a client. JSON is language-independent but uses conventions that are familiar to programmers of the C family of languages, including C, C++, C#, Java, JavaScript, Perl, Python, and many others. These properties make JSON an ideal data-interchange language..."
+        },
+        "originalLink": "http://example.com/understanding-json"
+      },
+      {
+        "title": "Getting Started with React",
+        "tags": ["React", "JavaScript", "Web Development"],
+        "summaries": {
+          "1min": "React is a JavaScript library for building user interfaces. It allows developers to create large web applications that can update and render efficiently...",
+          "3min": "React is a JavaScript library for building user interfaces. It allows developers to create large web applications that can update and render efficiently in response to data changes. React was created by Jordan Walke, a software engineer at Facebook, and is maintained by Facebook and a community of individual developers and companies...",
+          "5min": "React is a JavaScript library for building user interfaces. It allows developers to create large web applications that can update and render efficiently in response to data changes. React was created by Jordan Walke, a software engineer at Facebook, and is maintained by Facebook and a community of individual developers and companies. React encourages the creation of reusable UI components, which present data that changes over time..."
+        },
+        "originalLink": "http://example.com/getting-started-with-react"
+      }
+    ]
+  }
+  
