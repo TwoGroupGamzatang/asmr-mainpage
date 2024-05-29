@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import './App.css';
 
 class Interest extends Component {
   state = {
@@ -51,9 +50,7 @@ class Interest extends Component {
     e.preventDefault();
     const selectedInterests = this.state.interests.filter(interest => interest.selected).map(interest => interest.name);
     localStorage.setItem('selectedInterests', JSON.stringify(selectedInterests));
-    console.log('선택된 관심사:', selectedInterests);
-    this.props.onInterestsSelected();
-    window.open('', '', 'width=200,height=100').document.write('<p>수정이 완료되었습니다!</p>');
+    this.props.onInterestsSelected(selectedInterests);
   };
 
   render() {
