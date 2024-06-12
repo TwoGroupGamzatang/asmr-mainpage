@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { login } from './api';
 
-const Signup = ({ onSignupSuccess }) => {
+const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSignup = async (event) => {
     event.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/signup', {
-        email,
-        password
-      });
-      if (response.status === 201) {
-        onSignupSuccess();
+      const response = await login(email, password);
+      console.log(response);
+      if (response.status === 200) {
+        console.log(response.data);
+        onLoginSuccess(response.data.accessToken);
       } else {
         console.error('Signup failed');
       }
@@ -49,4 +49,4 @@ const Signup = ({ onSignupSuccess }) => {
   );
 };
 
-export default Signup;
+export default Login;

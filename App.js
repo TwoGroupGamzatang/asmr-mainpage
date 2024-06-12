@@ -1,12 +1,11 @@
 import React, { Component } from 'react';
 import './App.css';
-import TodoList from './TodoList';
 import Signup from './Signup';
 import Login from './Login';
 import Interest from './Interest';
 import articlesData from './articles.json';
 import MemoList from './components/MemoList';
-import { login } from './api';
+import { getContents, login, scrape, signup } from './api';
 
 class App extends Component {
   state = {
@@ -15,6 +14,7 @@ class App extends Component {
     interestsSelected: false,
     isLogin: true,
     url: '', // URL을 상태로 관리
+    domain: '', // 도메인을 상태로 관리
     selectedArticle: null, // 선택된 아티클
     articles: articlesData.articles, // JSON 데이터를 상태로 관리
     selectedTags: [], // 선택된 태그를 상태로 관리
@@ -32,19 +32,23 @@ class App extends Component {
     this.setState({ pageName, selectedArticle: null }); // 페이지 전환 시 selectedArticle을 null로 설정
   };
 
-  onLoginSuccess = async (username, password) => {
+  onLoginSuccess = (accessToken) => {
     try {
-      const response = await login(username, password);
-      this.setState({ loggedIn: true, token: response.data.token });
+      this.setState({ loggedIn: true, token: accessToken });
       this.onChangePage('interests');
     } catch (error) {
       console.error('Login failed', error);
     }
   };
 
-  onSignupSuccess = () => {
-    this.setState({ loggedIn: true });
-    this.onChangePage('interests');
+  onSignupSuccess = async (email, password) => {
+    try {
+      const response = await login(email, password);
+      this.setState({ loggedIn: true, token: response.data.token });
+      this.onChangePage('interests');
+    } catch (error) {
+      console.error('Signup login failed', error);
+    }
   };
 
   onInterestsSelected = (selectedTags) => {
@@ -59,9 +63,13 @@ class App extends Component {
     this.onChangePage('');
   };
 
-  onUrlSubmit = (url) => {
+  onUrlSubmit = async (url) => {
     this.setState({ url });
+    const response = await scrape(this.state.token, url);
+
+    console.log(`data: ${response.data}`);
   };
+
 
   onArticleSelect = (article) => {
     this.setState({ selectedArticle: article });
@@ -77,7 +85,7 @@ class App extends Component {
   };
 
   render() {
-    const { pageName, loggedIn, interestsSelected, isLogin, url, selectedArticle, articles, selectedTags, token, contentId } = this.state;
+    const { pageName, loggedIn, interestsSelected, isLogin, url, domain, selectedArticle, articles, selectedTags, token, contentId } = this.state;
 
     return (
       <div>
@@ -95,14 +103,19 @@ class App extends Component {
 
         {loggedIn && interestsSelected && (
           <div>
-            <button onClick={() => this.onChangePage('archive')}>Archive</button>
+            <button onClick={async() => {
+              this.onChangePage('archive');
+              const response = await getContents(this.state.token);
+              console.log(`contents: ${JSON.stringify(response.data.contents)}`);
+              this.setState({articles: response.data.contents});
+              }}>Archive</button>
             <button onClick={() => this.onChangePage('mypage')}>Mypage</button>
             <button onClick={() => this.onChangePage('summarize')}>Summarize</button>
             <button onClick={this.onLogout}>Logout</button>
             {pageName === '' && <Interest onInterestsSelected={this.onInterestsSelected} onLogout={this.onLogout} />}
             {pageName === 'archive' && <Page1 articles={articles} onArticleSelect={this.onArticleSelect} />}
             {pageName === 'mypage' && <Interest onInterestsSelected={this.onInterestsSelected} onLogout={this.onLogout} />}
-            {pageName === 'summarize' && <Page2 onUrlSubmit={this.onUrlSubmit} />}
+            {pageName === 'summarize' && <SummarizePage onUrlSubmit={this.onUrlSubmit} />}
             {pageName === 'archive' && selectedArticle && (
               <ArticleDetail
                 article={selectedArticle}
@@ -131,20 +144,7 @@ class App extends Component {
   }
 }
 
-function Page1({ articles, onArticleSelect }) {
-  return (
-    <div className="App">
-      <h1>Archive Page</h1>
-      {articles.map(article => (
-        <div key={article.title}>
-          <h2 onClick={() => onArticleSelect(article)}>{article.title}</h2>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Page2({ onUrlSubmit }) {
+function SummarizePage({ onUrlSubmit }) {
   const handleSubmit = (event) => {
     event.preventDefault();
     const url = event.target.todo.value;
@@ -171,10 +171,23 @@ function Page2({ onUrlSubmit }) {
   );
 }
 
+function Page1({ articles, onArticleSelect }) {
+  return (
+    <div className="App">
+      <h1>Archive Page</h1>
+      {articles.map(article => (
+        <div key={article.title}>
+          <h2 onClick={() => onArticleSelect(article)}>{article.title}</h2>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 class ArticleDetail extends Component {
   state = {
     showSummary: false,
-    summaryLength: '1min',
+    summaryLength: '5min',
     tags: this.props.article.tags,
     availableTags: this.props.availableTags.map(tag => ({
       name: tag,
@@ -210,29 +223,23 @@ class ArticleDetail extends Component {
 
   render() {
     const { article } = this.props;
-    const { showSummary, summaryLength, availableTags } = this.state;
-
+    const { showSummary, availableTags } = this.state;
+    const response = (this.state.token)
     return (
       <div className="article-detail">
         <h2>{article.title}</h2>
         <button onClick={this.toggleSummary}>
           {showSummary ? 'Hide Summary' : 'Show Summary'}
         </button>
-        {showSummary && (
-          <div>
-            <p>{article.summaries[summaryLength]}</p>
-            <label>
-              Summary Length:
-              <select value={summaryLength} onChange={this.handleSummaryChange}>
-                <option value="1min">1min</option>
-                <option value="3min">3min</option>
-                <option value="5min">5min</option>
-              </select>
-            </label>
-          </div>
-        )}
+        {showSummary &&
+        <div>
+        ${JSON.stringify(response.data.contents.summary)}
+        </div>
+        };
+        
         <label>
-          Tags:
+        <br></br>  
+        Tags:
           <div>
             {availableTags.map(tag => (
               <div key={tag.name}>
