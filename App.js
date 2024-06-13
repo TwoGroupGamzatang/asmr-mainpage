@@ -232,8 +232,9 @@ class ArticleDetail extends Component {
           {showSummary ? 'Hide Summary' : 'Show Summary'}
         </button>
         {showSummary &&
+// 문법이 이게 맞나
         <div>
-        ${JSON.stringify(response.data.contents.summary)}
+        {article.summary} 
         </div>
         };
         
