@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import './App.css';
-import TodoList from './TodoList';
 import Signup from './Signup';
 import Login from './Login';
 import Interest from './Interest';
 import articlesData from './articles.json';
+import MemoList from './components/MemoList';
+import { addMemo, getContents, getMemos, login, scrape, signup } from './api';
 
 class App extends Component {
   state = {
@@ -13,9 +14,12 @@ class App extends Component {
     interestsSelected: false,
     isLogin: true,
     url: '', // URL을 상태로 관리
+    domain: '', // 도메인을 상태로 관리
     selectedArticle: null, // 선택된 아티클
     articles: articlesData.articles, // JSON 데이터를 상태로 관리
-    selectedTags: [] // 선택된 태그를 상태로 관리
+    selectedTags: [], // 선택된 태그를 상태로 관리
+    token: null, // 로그인 토큰
+    contentId: '665c091ca5da78d6f1ff32ac' // Example contentId, change as needed
   };
 
   componentDidMount() {
@@ -28,14 +32,23 @@ class App extends Component {
     this.setState({ pageName, selectedArticle: null }); // 페이지 전환 시 selectedArticle을 null로 설정
   };
 
-  onLoginSuccess = () => {
-    this.setState({ loggedIn: true });
-    this.onChangePage('interests');
+  onLoginSuccess = (accessToken) => {
+    try {
+      this.setState({ loggedIn: true, token: accessToken });
+      this.onChangePage('interests');
+    } catch (error) {
+      console.error('Login failed', error);
+    }
   };
 
-  onSignupSuccess = () => {
-    this.setState({ loggedIn: true });
-    this.onChangePage('interests');
+  onSignupSuccess = async (email, password) => {
+    try {
+      const response = await login(email, password);
+      this.setState({ loggedIn: true, token: response.data.token });
+      this.onChangePage('interests');
+    } catch (error) {
+      console.error('Signup login failed', error);
+    }
   };
 
   onInterestsSelected = (selectedTags) => {
@@ -44,15 +57,19 @@ class App extends Component {
   };
 
   onLogout = () => {
-    this.setState({ loggedIn: false, interestsSelected: false, url: '' }); // 로그아웃 시 URL도 초기화
+    this.setState({ loggedIn: false, interestsSelected: false, url: '', token: null }); // 로그아웃 시 URL과 토큰도 초기화
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('selectedInterests');
     this.onChangePage('');
   };
 
-  onUrlSubmit = (url) => {
+  onUrlSubmit = async (url) => {
     this.setState({ url });
+    const response = await scrape(this.state.token, url);
+
+    console.log(`data: ${response.data}`);
   };
+
 
   onArticleSelect = (article) => {
     this.setState({ selectedArticle: article });
@@ -68,7 +85,7 @@ class App extends Component {
   };
 
   render() {
-    const { pageName, loggedIn, interestsSelected, isLogin, url, selectedArticle, articles, selectedTags } = this.state;
+    const { pageName, loggedIn, interestsSelected, isLogin, url, domain, selectedArticle, articles, selectedTags, token, contentId } = this.state;
 
     return (
       <div>
@@ -86,13 +103,19 @@ class App extends Component {
 
         {loggedIn && interestsSelected && (
           <div>
-            <button onClick={() => this.onChangePage('archive')}>Archive</button>
+            <button onClick={async() => {
+              this.onChangePage('archive');
+              const response = await getContents(this.state.token);
+              console.log(`contents: ${JSON.stringify(response.data.contents)}`);
+              this.setState({articles: response.data.contents});
+              }}>Archive</button>
             <button onClick={() => this.onChangePage('mypage')}>Mypage</button>
             <button onClick={() => this.onChangePage('summarize')}>Summarize</button>
+            <button onClick={this.onLogout}>Logout</button>
             {pageName === '' && <Interest onInterestsSelected={this.onInterestsSelected} onLogout={this.onLogout} />}
             {pageName === 'archive' && <Page1 articles={articles} onArticleSelect={this.onArticleSelect} />}
             {pageName === 'mypage' && <Interest onInterestsSelected={this.onInterestsSelected} onLogout={this.onLogout} />}
-            {pageName === 'summarize' && <Page2 onUrlSubmit={this.onUrlSubmit} />}
+            {pageName === 'summarize' && <SummarizePage onUrlSubmit={this.onUrlSubmit} />}
             {pageName === 'archive' && selectedArticle && (
               <ArticleDetail
                 article={selectedArticle}
@@ -100,6 +123,7 @@ class App extends Component {
                 availableTags={selectedTags}
               />
             )}
+            {pageName === 'memo' && <MemoList contentId={contentId} token={token} />}
           </div>
         )}
 
@@ -120,20 +144,7 @@ class App extends Component {
   }
 }
 
-function Page1({ articles, onArticleSelect }) {
-  return (
-    <div className="App">
-      <h1>Archive Page</h1>
-      {articles.map(article => (
-        <div key={article.title}>
-          <h2 onClick={() => onArticleSelect(article)}>{article.title}</h2>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Page2({ onUrlSubmit }) {
+function SummarizePage({ onUrlSubmit }) {
   const handleSubmit = (event) => {
     event.preventDefault();
     const url = event.target.todo.value;
@@ -160,10 +171,23 @@ function Page2({ onUrlSubmit }) {
   );
 }
 
+function Page1({ articles, onArticleSelect }) {
+  return (
+    <div className="App">
+      <h1>Archive Page</h1>
+      {articles.map(article => (
+        <div key={article.title}>
+          <h2 onClick={() => onArticleSelect(article)}>{article.title}</h2>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 class ArticleDetail extends Component {
   state = {
     showSummary: false,
-    summaryLength: '1min',
+    summaryLength: '5min',
     tags: this.props.article.tags,
     availableTags: this.props.availableTags.map(tag => ({
       name: tag,
@@ -199,29 +223,51 @@ class ArticleDetail extends Component {
 
   render() {
     const { article } = this.props;
-    const { showSummary, summaryLength, availableTags } = this.state;
+    const { showSummary, availableTags } = this.state;
+    const extractOverallSummary = (summary) => {
+      const summaryString = JSON.stringify(summary);
+      console.log(summaryString);
+      const keyword = "Overall summary";
+      const startIndex = summaryString.indexOf(keyword);
+      if (startIndex === -1) {
+        // 키워드를 찾지 못한 경우
+        return "";
+      }
+      
+      // 키워드 이후의 문자열을 추출
+      const overallSummary = summaryString.substring(startIndex + keyword.length).trim();
+      return overallSummary;
+    };
+    const memoContents = getMemos(this.state.token, article._id).then((response) => response.data.memos.map(memo => memo.content));
+    const handleSubmit = async(event) => {
+      event.preventDefault();
+      const newMemoContent = event.addMemo.value;
+      const response = addMemo(this.state.token, article._id, newMemoContent);
+      console.log(response.data.memos);
+    };
 
+    const response = (this.state.token)
     return (
       <div className="article-detail">
         <h2>{article.title}</h2>
         <button onClick={this.toggleSummary}>
           {showSummary ? 'Hide Summary' : 'Show Summary'}
         </button>
-        {showSummary && (
-          <div>
-            <p>{article.summaries[summaryLength]}</p>
-            <label>
-              Summary Length:
-              <select value={summaryLength} onChange={this.handleSummaryChange}>
-                <option value="1min">1min</option>
-                <option value="3min">3min</option>
-                <option value="5min">5min</option>
-              </select>
-            </label>
-          </div>
-        )}
+        {showSummary &&
+// 문법이 이게 맞나
+        <div>
+        {article.summary && extractOverallSummary(article.summary)}
+        <form onSubmit={handleSubmit}>
+        <label htmlFor="addMemo">메모를 입력하세요:</label>
+        <input type="text" id="" name="memo.content" placeholder="메모 입력" />
+        <button type="submit">Go</button>
+      </form>
+        </div>
+        }
+        
         <label>
-          Tags:
+        <br></br>  
+        Tags:
           <div>
             {availableTags.map(tag => (
               <div key={tag.name}>
@@ -238,7 +284,7 @@ class ArticleDetail extends Component {
         </label>
         <button onClick={this.saveChanges}>Save Changes</button>
         <p>Tags: {availableTags.filter(tag => tag.selected).map(tag => tag.name).join(', ')}</p>
-        <a href={article.originalLink} target="_blank" rel="noopener noreferrer">Read more</a>
+        <a href={article.url} target="_blank" rel="noopener noreferrer" style={{cursor: 'pointer'}}>Read more</a>
       </div>
     );
   }
